@@ -1,5 +1,5 @@
 # make a function that will send a welcome message when a user joins
-
+print("hiiiiiii")
 
 
 # make a function that will give them tasks to do 
