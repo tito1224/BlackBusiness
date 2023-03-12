@@ -29,6 +29,8 @@ BOT_ID = client.api_call("auth.test")['user_id']
 message_counts = {} 
 reaction_counts = {}
 dictScoreCount = {}
+dictClient = {}
+topThree = sorted(dictScoreCount.items(), key=lambda x:x[1]) 
 
 # store to check if people have done first few tasks
 welcome_messages = {}
@@ -166,7 +168,7 @@ def member_join_channel(payload):
     event = payload.get('event', {})
     channel_id = event.get('channel')
     user_id = event.get('user') #Tito will establish user's NAME rather than ID
-    userinfo = client.users_info(user=user_id).get('user').get('name')
+    userinfo = client.users_info(user=user_id).get('user').get('real_name')
     text = event.get('text')
 
     #if channel_id == "C04T3JPMCGG":
@@ -182,7 +184,7 @@ def reaction_added_intro(payLoad):
     event = payLoad.get('event',{}) # look for key event inside payload/data
     channel_id = event.get('item',{}).get('channel') # give you the channel id
     user_id = event.get('user') # get the user id 
-    userinfo = client.users_info(user=user_id).get('user').get('name')
+    userinfo = client.users_info(user=user_id).get('user').get('real_name')
     text = event.get('text') #grab text
 
     if f'@{user_id}' not in welcome_messages:
@@ -216,30 +218,33 @@ def message_added_intro(payLoad):
     event = payLoad.get('event',{}) # look for key event inside payload/data
     channel_id = event.get('item',{}).get('channel') # give you the channel id
     user_id = event.get('user') # get the user id 
-    userinfo = client.users_info(user=user_id).get('user').get('name')
+    userinfo = client.users_info(user=user_id).get('user').get('real_name')
     text = event.get('text') #grab text
 
     if f'@{user_id}' not in welcome_messages:
         return 
     
-    welcome = welcome_messages[f'@{user_id}'][userinfo]
-    if welcome.MessageCompleted is not True:
-        # if user_id != None and BOT_ID!= user_id and channel_id != f'@{user_id}':
-        #     if user_id in reaction_counts:
-        #         reaction_counts[user_id] +=1
-        #         dictScoreCount[user_id]+=1
-        #     else:
-        #         reaction_counts[user_id] = 1
-        #         dictScoreCount[user_id] = 1 
-        
-        welcome = welcome_messages[f'@{user_id}'][userinfo]
-        welcome.MessageCompleted = True
-        #welcome.channel = channel_id # change channel for welcome message
-        message = welcome.get_message()
-        #updated_message = client.chat_update(**message)
-        response = client.chat_postMessage(**message)
+    if len(text)> 50:
 
-        #send_point_verification(f"@{user_id}",user_id)
+        welcome = welcome_messages[f'@{user_id}'][userinfo]
+        if welcome.MessageCompleted is not True:
+            # if user_id != None and BOT_ID!= user_id and channel_id != f'@{user_id}':
+            #     if user_id in reaction_counts:
+            #         reaction_counts[user_id] +=1
+            #         dictScoreCount[user_id]+=1
+            #     else:
+            #         reaction_counts[user_id] = 1
+            #         dictScoreCount[user_id] = 1 
+            
+            welcome = welcome_messages[f'@{user_id}'][userinfo]
+            welcome.MessageCompleted = True
+            #welcome.channel = channel_id # change channel for welcome message
+            message = welcome.get_message()
+            #updated_message = client.chat_update(**message)
+            response = client.chat_postMessage(**message)
+            print("finished updating message task")
+
+            #send_point_verification(f"@{user_id}",user_id)
 
 # function to track when they use a react emoji to a message
 @slack_event_adapter.on('reaction_added') # use to handle on "reaction" event
@@ -247,7 +252,9 @@ def reaction_added(payLoad):
     event = payLoad.get('event',{}) # look for key event inside payload/data
     channel_id = event.get('item',{}).get('channel') # give you the channel id
     user_id = event.get('user') # get the user id 
-    userinfo = client.users_info(user=user_id).get('user').get('name')
+    userinfo = client.users_info(user=user_id).get('user').get('real_name')
+    
+    #print(client.users_info(user=user_id).get('user'))
     text = event.get('text') #grab text
 
     if userinfo != None and BOT_ID!= user_id and channel_id == "C04T3HULG56":
@@ -264,6 +271,8 @@ def reaction_added(payLoad):
         #t = time.localtime()
         #current_time = time.strftime("%H:%M:%S",t) # format time
         #strDate = str(date.today())+str(current_time)
+        #print(userinfo)
+        #print(dictScoreCount)
         send_point_verification(f"@{user_id}",userinfo)
     print('done')
 
@@ -279,10 +288,10 @@ def message(payLoad):
     event = payLoad.get('event',{}) # look for key event inside payload/data
     channel_id = event.get('channel') # give you the channel id
     user_id = event.get('user') # get the user id
-    userinfo = client.users_info(user=user_id).get('user').get('name')
+    userinfo = client.users_info(user=user_id).get('user').get('real_name')
     text = event.get('text') #grab text
 
-    if userinfo != None and BOT_ID!= user_id and channel_id=="C04T3HULG56":
+    if userinfo != None and BOT_ID!= user_id and channel_id=="C04T3HULG56" and len(text)>50:
         if userinfo in message_counts:
             message_counts[userinfo] +=1
         else:
@@ -298,7 +307,7 @@ def message(payLoad):
         #strDate = str(date.today())+str(current_time)
         send_point_verification(f"@{user_id}",userinfo)
     
-    print('done')
+        print('finished adding a point for a message')
 
 # make a command so that the user can see how many messages they have sent
 @app.route('/message-count',methods=['POST'])
@@ -306,7 +315,7 @@ def message_count():
     data = request.form # dictionary of key value pairs sent
     #print(data)
     user_id = data.get("user_id") # grab the user_id
-    userinfo = client.users_info(user=user_id).get('user').get('name')
+    userinfo = client.users_info(user=user_id).get('user').get('real_name')
     channel_id = data.get('channel_id')
     strMessage = message_counts.get(userinfo,0) # get the user_id or else return 0
     numMessagePoints= message_counts.get(userinfo,0)*1
@@ -320,7 +329,7 @@ def score_count():
     data = request.form # dictionary of key value pairs sent
     #print(data)
     user_id = data.get("user_id") # grab the user_id
-    userinfo = client.users_info(user=user_id).get('user').get('name')
+    userinfo = client.users_info(user=user_id).get('user').get('real_name')
     channel_id = data.get('channel_id')
     strMessage = message_counts.get(userinfo,0) # get the user_id or else return 0
     numMessagePoints= message_counts.get(userinfo,0)*1
@@ -475,27 +484,47 @@ def customer_messages(payLoad):
     event = payLoad.get('event',{}) # look for key event inside payload/data
     channel_id = event.get('channel') # give you the channel id
     user_id = event.get('user') # get the user id
-    userinfo = client.users_info(user=user_id).get('user').get('name')
+    ts = event.get('ts')
+    #convoresult = client.conversations_replies(channel=channel_id, ts = ts)
+    #client_thread_id = convoresult.get('messages')[0].get('client_msg_id')
+    #print(client_thread_id)
+    userinfo = client.users_info(user=user_id).get('user').get('real_name')
     text = event.get('text') #grab text
 
-    inputs = [text]
-    if channel_id == "C04SBHMK76H" and user_id != BOT_ID:
-
-        response = co.classify(
-            model ='large',
-            inputs = inputs,
-            examples=examples
-        )
-
-        valClassification = response.classifications
-        d = dict(itertools.zip_longest(*[iter(valClassification)] * 2, fillvalue=""))
-        d = list(map(str,d))
-        d = str(d[0].split())
-        cat = d[33:43]
-
-        userinfo = client.users_info(user=user_id).get('user').get('name')
-        client.chat_postMessage(channel=channel_id,text=f"Hey {userinfo}! You asked a question pertaining to #{cat}. A message will be sent shortly to the owner.")
+    lstTopOwners = []
+    print('topthree are')
+    print(dictScoreCount)
+    topPeople = sorted(dictScoreCount.items(), key=lambda x:x[1]) 
+    for individual in topPeople:
+        ind = individual[0]
+        lstTopOwners.append(ind)
+    lstTopOwners = [i.lower() for i in lstTopOwners]
+    print(lstTopOwners)
     
+    # if "question" in text.lower() and text.lower() not in lstTopOwners and BOT_ID!=user_id:
+    #     client.chat_postMessage(channel=channel_id,thread_ts = ts,text=f"Hey {userinfo}! Thanks so much for your question. Please tag the owners so they can respond accordingly. Remember to use the word: 'question' and mention the owners in your query.")
+    # elif "question" in text.lower() and text.lower() in lstTopOwners and BOT_ID!=user_id:
+        
+    if "question" in text.lower():
+        inputs = [text]
+        if channel_id == "C04SBHMK76H" and user_id != BOT_ID:
+            dictClient[ts] = [userinfo,text]
+
+            response = co.classify(
+                model ='large',
+                inputs = inputs,
+                examples=examples
+            )
+
+            valClassification = response.classifications
+            d = dict(itertools.zip_longest(*[iter(valClassification)] * 2, fillvalue=""))
+            d = list(map(str,d))
+            d = str(d[0].split())
+            cat = d[33:43]
+
+            userinfo = client.users_info(user=user_id).get('user').get('real_name')
+            client.chat_postMessage(channel=channel_id,thread_ts = ts,text=f"Hey {userinfo}! You asked a question pertaining to #{cat}. A message will be sent shortly to the owners.")
+        
         
 
         
